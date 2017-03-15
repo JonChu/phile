@@ -4,39 +4,40 @@ import (
 	"os"
 	"strings"
 
-    "github.com/golang/glog"
 	"github.com/etcinit/gonduit"
 	"github.com/etcinit/gonduit/core"
 	"github.com/nlopes/slack"
     "github.com/joho/godotenv"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 var botId string
 
 func run(slackClient *slack.Client, phabClient *gonduit.Conn) int {
-	glog.Info("Setting up RTM connection...")
+	log.Info("Setting up RTM connection...")
 
 	rtm := slackClient.NewRTM()
 	go rtm.ManageConnection()
 
-	//glog.Info("Connection successfully established.")
-	glog.Info("Accepting incoming events...")
+	//log.Info("Connection successfully established.")
+	log.Info("Accepting incoming events...")
 
 	for {
 		select {
 		case msg := <-rtm.IncomingEvents:
-			//glog.Info("Incoming event received...\n")
+			//log.Info("Incoming event received...\n")
 			switch ev := msg.Data.(type) {
 			case *slack.ConnectedEvent:
 				botId = ev.Info.User.ID
-				glog.Info("Connection established...")
-				glog.Info("BotId: %v\n", botId)
+				log.Info("Connection established...")
+				log.Infof("BotId: %v", botId)
 
 			case *slack.HelloEvent:
-				glog.Info("Server ack received...")
+				log.Info("Server ack received...")
 
 			case *slack.MessageEvent:
-				glog.Info("Message: %v\n", ev)
+				log.Infof("Message: %v", ev)
 
 				if isForBot(ev) {
 					/* parseMessage(ev)
@@ -51,10 +52,10 @@ func run(slackClient *slack.Client, phabClient *gonduit.Conn) int {
 				}
 
 			case *slack.RTMError:
-				glog.Error("Error: %s\n", ev.Error())
+				log.Error("Error: %s\n", ev.Error())
 
 			case *slack.InvalidAuthEvent:
-				glog.Error("Invalid credentials")
+				log.Error("Invalid credentials")
 				return 1
 			}
 		}
@@ -75,7 +76,7 @@ func isForBot(msgEvent *slack.MessageEvent) bool {
 func main() {
     err := godotenv.Load("phile.env")
     if err != nil {
-        glog.Fatal("Error loading phile.env file.")
+        log.Fatal("Error loading phile.env file.")
     }
     slackApiToken := os.Getenv("SLACK_API_TOKEN")
     phabApiToken := os.Getenv("PHAB_API_TOKEN")
@@ -86,7 +87,7 @@ func main() {
 		phabServerUrl,
 		&core.ClientOptions{APIToken: phabApiToken})
 	if err != nil {
-        glog.Fatal("Error connecting to phabricator conduit.")
+        log.Fatal("Error connecting to phabricator conduit.")
 	}
 
 	os.Exit(run(slackClient, phabClient))
